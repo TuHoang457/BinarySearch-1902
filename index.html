@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Search Visualizer - Pro Edition</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --primary-blue: #3b82f6; /* Left */
+            --primary-yellow: #eab308; /* Mid */
+            --primary-red: #ef4444; /* Right */
+            --primary-green: #22c55e; /* Found */
+            --primary-gray: #475569; /* Normal */
+            --border-color: #334155;
+            --transition-speed: 0.4s;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(to right, #60a5fa, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 20px;
+        }
+
+        @media (max-width: 1000px) {
+            .container { grid-template-columns: 1fr; }
+        }
+
+        /* Card System */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        /* Visualization Area */
+        .viz-area {
+            min-height: 180px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 40px 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .array-box {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: var(--primary-gray);
+            border: 2px solid transparent;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        /* State Classes */
+        .array-box.active-left { border-color: var(--primary-blue); box-shadow: 0 0 15px var(--primary-blue); }
+        .array-box.active-right { border-color: var(--primary-red); box-shadow: 0 0 15px var(--primary-red); }
+        .array-box.active-mid { 
+            border-color: var(--primary-yellow); 
+            box-shadow: 0 0 20px var(--primary-yellow);
+            transform: scale(1.15);
+            z-index: 5;
+        }
+        .array-box.found { 
+            background: var(--primary-green) !important; 
+            border-color: #fff; 
+            transform: scale(1.2);
+            animation: pulse 1s infinite;
+        }
+        .array-box.dimmed { opacity: 0.2; transform: scale(0.9); filter: grayscale(1); }
+
+        .label-tag {
+            position: absolute;
+            top: -28px;
+            font-size: 0.75rem;
+            font-weight: 800;
+        }
+
+        /* Legend Section */
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+
+        .legend-item:hover {
+            background: rgba(255,255,255,0.07);
+            transform: translateY(-3px);
+            border-color: var(--border-color);
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .legend-text {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        .legend-title {
+            font-weight: 600;
+            color: var(--text-main);
+            display: block;
+            font-size: 0.9rem;
+        }
+
+        /* Status Badge */
+        .status-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .status-indicator {
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-weight: 800;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .status-searching { background: var(--primary-blue); color: white; animation: blink 1.5s infinite; }
+        .status-move-left { background: var(--primary-red); color: white; }
+        .status-move-right { background: var(--primary-blue); color: white; }
+        .status-found { background: var(--primary-green); color: white; animation: pulse 1s infinite; }
+        .status-notfound { background: #57534e; color: white; }
+        .status-idle { background: #334155; color: var(--text-dim); }
+
+        /* Inputs & Buttons */
+        .input-group { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
+        .input-item { flex: 1; min-width: 150px; display: flex; flex-direction: column; }
+        label { margin-bottom: 8px; color: var(--text-dim); font-size: 0.85rem; font-weight: 600; }
+        input {
+            background: #0f172a; border: 1px solid var(--border-color);
+            color: white; padding: 12px; border-radius: 8px; outline: none;
+        }
+        input:focus { border-color: var(--primary-blue); }
+
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+        button {
+            padding: 12px 20px; border-radius: 8px; border: none; cursor: pointer;
+            font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+            color: white;
+        }
+        button:active { transform: scale(0.95); }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-primary { background: var(--primary-blue); }
+        .btn-success { background: var(--primary-green); }
+        .btn-danger { background: var(--primary-red); }
+        .btn-accent { background: #7c3aed; }
+        .btn-slate { background: #475569; }
+
+        /* Pseudo-code */
+        .code-line { padding: 4px 12px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 0.9rem; border-left: 3px solid transparent; }
+        .code-line.active { background: rgba(234, 179, 8, 0.2); border-left-color: var(--primary-yellow); color: var(--primary-yellow); }
+
+        /* Animations */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); }
+            70% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Binary Search Visualizer</h1>
+        <p style="color: var(--text-dim)">Trình diễn trực quan & Giải thích thuật toán chuyên sâu</p>
+    </header>
+
+    <div class="container">
+        <!-- Main Panel -->
+        <main>
+            <!-- Control Card -->
+            <div class="card">
+                <div class="input-group">
+                    <div class="input-item" style="flex: 2;">
+                        <label>Mảng số nguyên (tự động sắp xếp)</label>
+                        <input type="text" id="arrayInput" value="5, 12, 18, 23, 31, 45, 55, 67, 72, 89, 95">
+                    </div>
+                    <div class="input-item">
+                        <label>Số cần tìm</label>
+                        <input type="number" id="targetInput" value="67">
+                    </div>
+                </div>
+                <div class="controls">
+                    <button class="btn-accent" onclick="generateRandomArray()">🎲 Random Array</button>
+                    <button class="btn-primary" id="startBtn" onclick="startSearch()">🚀 Start</button>
+                    <button class="btn-danger" onclick="reset()">🔄 Reset</button>
+                </div>
+            </div>
+
+            <!-- Visualization Card -->
+            <div class="card">
+                <div class="status-container">
+                    <div id="statusIndicator" class="status-indicator status-idle">
+                        <span>●</span> <span id="statusLabel">Ready</span>
+                    </div>
+                    <div style="color: var(--text-dim); font-size: 0.85rem;" id="stepCount">Bước: 0 / 0</div>
+                </div>
+
+                <div id="vizContainer" class="viz-area">
+                    <!-- Boxes generated here -->
+                </div>
+
+                <div class="controls">
+                    <button class="btn-slate" onclick="prevStep()" id="prevBtn" disabled>⏮ Prev</button>
+                    <button class="btn-success" onclick="toggleAutoRun()" id="autoBtn" disabled>▶ Auto Run</button>
+                    <button class="btn-slate" onclick="nextStep()" id="nextBtn" disabled>Next ⏭</button>
+                </div>
+
+                <div style="margin-top: 20px; display: flex; align-items: center; gap: 15px;">
+                    <label style="margin:0; white-space: nowrap;">Tốc độ:</label>
+                    <input type="range" id="speedRange" min="200" max="2000" value="800" step="100" style="flex:1" dir="rtl">
+                </div>
+            </div>
+
+            <!-- Legend Card -->
+            <div class="card">
+                <h3 style="margin-bottom: 15px; font-size: 1.1rem; color: #60a5fa;">💡 Chú thích màu sắc & Thuật toán</h3>
+                <div class="legend-grid">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--primary-blue);"></div>
+                        <div>
+                            <span class="legend-title">Left Pointer (L)</span>
+                            <span class="legend-text">Vị trí bắt đầu vùng tìm kiếm hiện tại.</span>
+                        </div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--primary-yellow);"></div>
+                        <div>
+                            <span class="legend-title">Mid Pointer (M)</span>
+                            <span class="legend-text">Phần tử ở giữa dùng để so sánh với Target.</span>
+                        </div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--primary-red);"></div>
+                        <div>
+                            <span class="legend-title">Right Pointer (R)</span>
+                            <span class="legend-text">Vị trí kết thúc vùng tìm kiếm hiện tại.</span>
+                        </div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--primary-green);"></div>
+                        <div>
+                            <span class="legend-title">Found Element</span>
+                            <span class="legend-text">Vị trí tìm thấy giá trị Target.</span>
+                        </div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--primary-gray);"></div>
+                        <div>
+                            <span class="legend-title">Normal Element</span>
+                            <span class="legend-text">Các phần tử chưa được xét hoặc nằm ngoài vùng tìm kiếm.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Side Panel -->
+        <aside>
+            <div class="card">
+                <h3 style="color: var(--primary-yellow); margin-bottom: 15px;">Pseudo-code</h3>
+                <div id="pseudoCode">
+                    <div class="code-line" id="line1">left = 0, right = n - 1</div>
+                    <div class="code-line" id="line2">while (left <= right):</div>
+                    <div class="code-line" id="line3">&nbsp;&nbsp;mid = floor((left+right)/2)</div>
+                    <div class="code-line" id="line4">&nbsp;&nbsp;if array[mid] == target:</div>
+                    <div class="code-line" id="line5">&nbsp;&nbsp;&nbsp;&nbsp;<b>return mid // Found!</b></div>
+                    <div class="code-line" id="line6">&nbsp;&nbsp;if array[mid] < target:</div>
+                    <div class="code-line" id="line7">&nbsp;&nbsp;&nbsp;&nbsp;left = mid + 1</div>
+                    <div class="code-line" id="line8">&nbsp;&nbsp;else:</div>
+                    <div class="code-line" id="line9">&nbsp;&nbsp;&nbsp;&nbsp;right = mid - 1</div>
+                    <div class="code-line" id="line10">return -1 // Not Found</div>
+                </div>
+            </div>
+
+            <div class="card" id="explanationCard">
+                <h3 style="color: var(--primary-blue); margin-bottom: 15px;">Giải thích bước</h3>
+                <p id="explanationText" style="line-height: 1.6; color: #cbd5e1;">Bấm "Start" để xem thuật toán hoạt động.</p>
+            </div>
+
+            <div class="card">
+                <h3 style="color: var(--primary-red); margin-bottom: 15px;">Độ phức tạp</h3>
+                <div style="font-size: 0.9rem;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                        <span>Best:</span> <span style="color:var(--primary-green)">O(1)</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                        <span>Average:</span> <span style="color:var(--primary-yellow)">O(log n)</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>Worst:</span> <span style="color:var(--primary-yellow)">O(log n)</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        let array = [];
+        let steps = [];
+        let currentStepIdx = -1;
+        let isAutoRunning = false;
+        let autoTimer = null;
+
+        function generateSteps(arr, target) {
+            let s = [];
+            let l = 0;
+            let r = arr.length - 1;
+
+            s.push({
+                l, r, mid: null, line: 1, 
+                msg: `Khởi tạo vùng tìm kiếm từ Index ${l} đến ${r}.`,
+                status: 'searching', statusLabel: 'Searching...'
+            });
+
+            while (l <= r) {
+                let m = Math.floor((l + r) / 2);
+                
+                // Bước: Tính Mid
+                s.push({
+                    l, r, mid: m, line: 3, 
+                    msg: `Tính Mid = floor((${l} + ${r}) / 2) = ${m}. Giá trị tại đây là ${arr[m]}.`,
+                    status: 'searching', statusLabel: 'Calculating Mid'
+                });
+
+                // Bước: Kiểm tra
+                s.push({
+                    l, r, mid: m, line: 4, 
+                    msg: `So sánh giá trị tại Mid (${arr[m]}) với Target (${target}).`,
+                    status: 'searching', statusLabel: 'Comparing'
+                });
+
+                if (arr[m] === target) {
+                    s.push({
+                        l, r, mid: m, line: 5, 
+                        msg: `Tuyệt vời! ${arr[m]} khớp với Target tại Index ${m}.`,
+                        status: 'found', statusLabel: 'FOUND!'
+                    });
+                    return s;
+                }
+
+                if (arr[m] < target) {
+                    let oldL = l;
+                    l = m + 1;
+                    s.push({
+                        l: oldL, r, mid: m, line: 7, 
+                        msg: `${arr[m]} < ${target}. Loại bỏ nửa trái, di chuyển Left sang ${l}.`,
+                        status: 'move-right', statusLabel: 'Move Right'
+                    });
+                } else {
+                    let oldR = r;
+                    r = m - 1;
+                    s.push({
+                        l, r: oldR, mid: m, line: 9, 
+                        msg: `${arr[m]} > ${target}. Loại bỏ nửa phải, di chuyển Right sang ${r}.`,
+                        status: 'move-left', statusLabel: 'Move Left'
+                    });
+                }
+            }
+
+            s.push({
+                l, r, mid: null, line: 10, 
+                msg: `Left vượt quá Right. Target không tồn tại trong mảng này.`,
+                status: 'notfound', statusLabel: 'Not Found'
+            });
+            return s;
+        }
+
+        function renderArray() {
+            const container = document.getElementById('vizContainer');
+            container.innerHTML = '';
+            array.forEach((val, idx) => {
+                const box = document.createElement('div');
+                box.className = 'array-box';
+                box.id = `box-${idx}`;
+                box.innerText = val;
+                container.appendChild(box);
+            });
+        }
+
+        function updateUI() {
+            const step = steps[currentStepIdx];
+            const boxes = document.querySelectorAll('.array-box');
+
+            boxes.forEach((box, idx) => {
+                box.className = 'array-box';
+                box.innerHTML = array[idx];
+                if (idx < step.l || idx > step.r) box.classList.add('dimmed');
+                if (idx === step.l) addLabel(box, 'L', 'var(--primary-blue)', 'active-left');
+                if (idx === step.r) addLabel(box, 'R', 'var(--primary-red)', 'active-right');
+                if (idx === step.mid) addLabel(box, 'M', 'var(--primary-yellow)', 'active-mid');
+                if (step.status === 'found' && idx === step.mid) box.classList.add('found');
+            });
+
+            // Update Status Badge
+            const indicator = document.getElementById('statusIndicator');
+            const label = document.getElementById('statusLabel');
+            indicator.className = `status-indicator status-${step.status}`;
+            label.innerText = step.statusLabel;
+
+            // Text info
+            document.getElementById('explanationText').innerText = step.msg;
+            document.getElementById('stepCount').innerText = `Bước: ${currentStepIdx + 1} / ${steps.length}`;
+
+            // Highlight Code
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+            document.getElementById(`line${step.line}`).classList.add('active');
+
+            // Button states
+            document.getElementById('prevBtn').disabled = currentStepIdx === 0;
+            document.getElementById('nextBtn').disabled = currentStepIdx === steps.length - 1;
+            if (step.status === 'found' || step.status === 'notfound') stopAutoRun();
+        }
+
+        function addLabel(parent, text, color, activeClass) {
+            parent.classList.add(activeClass);
+            const tag = document.createElement('div');
+            tag.className = 'label-tag';
+            tag.innerText = text;
+            tag.style.color = color;
+            parent.appendChild(tag);
+        }
+
+        function startSearch() {
+            const inputArr = document.getElementById('arrayInput').value.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x));
+            if (inputArr.length === 0) return alert("Nhập mảng hợp lệ");
+            
+            array = inputArr.sort((a, b) => a - b);
+            document.getElementById('arrayInput').value = array.join(', ');
+            
+            const target = parseInt(document.getElementById('targetInput').value);
+            steps = generateSteps(array, target);
+            currentStepIdx = 0;
+            
+            renderArray();
+            updateUI();
+            
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('autoBtn').disabled = false;
+            document.getElementById('nextBtn').disabled = false;
+        }
+
+        function nextStep() { if (currentStepIdx < steps.length - 1) { currentStepIdx++; updateUI(); } }
+        function prevStep() { if (currentStepIdx > 0) { currentStepIdx--; updateUI(); } }
+
+        function toggleAutoRun() {
+            if (isAutoRunning) {
+                stopAutoRun();
+            } else {
+                isAutoRunning = true;
+                document.getElementById('autoBtn').innerText = "⏸ Pause";
+                document.getElementById('autoBtn').classList.replace('btn-success', 'btn-danger');
+                autoTimer = setInterval(() => {
+                    if (currentStepIdx < steps.length - 1) nextStep();
+                    else stopAutoRun();
+                }, parseInt(document.getElementById('speedRange').value));
+            }
+        }
+
+        function stopAutoRun() {
+            isAutoRunning = false;
+            clearInterval(autoTimer);
+            document.getElementById('autoBtn').innerText = "▶ Auto Run";
+            document.getElementById('autoBtn').classList.replace('btn-danger', 'btn-success');
+        }
+
+        function reset() {
+            stopAutoRun();
+            currentStepIdx = -1;
+            renderArray();
+            document.getElementById('statusIndicator').className = 'status-indicator status-idle';
+            document.getElementById('statusLabel').innerText = 'Ready';
+            document.getElementById('explanationText').innerText = 'Bấm "Start" để bắt đầu...';
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('autoBtn').disabled = true;
+            document.getElementById('nextBtn').disabled = true;
+            document.getElementById('prevBtn').disabled = true;
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+        }
+
+        function generateRandomArray() {
+            reset();
+            const size = Math.floor(Math.random() * 8) + 7;
+            let randomArr = Array.from({length: size}, () => Math.floor(Math.random() * 100));
+            document.getElementById('arrayInput').value = [...new Set(randomArr)].sort((a,b)=>a-b).join(', ');
+            document.getElementById('targetInput').value = randomArr[Math.floor(Math.random() * randomArr.length)];
+            startSearch();
+        }
+
+        window.onload = renderArray;
+    </script>
+</body>
+</html>
